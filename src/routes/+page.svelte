@@ -1,83 +1,185 @@
 <script>
-	import { PI_IP, REFRESH_TOKEN } from '$env/dynamic/private';
+	import {
+		PUBLIC_N8N_PROD_URL,
+		PUBLIC_N8N_TEST_URL,
+		PUBLIC_N8N_USER,
+		PUBLIC_N8N_PASS
+	} from '$env/static/public';
 	import Tile from '$lib/Tile.svelte';
 	import triggerRefresh from '$lib/refresh.js';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import { Calendar } from '$lib/components/ui/calendar/index.js';
+	import { getLocalTimeZone, today } from '@internationalized/date';
+	import * as Table from '$lib/components/ui/table/index.js';
+	import { onMount } from 'svelte';
+
+	let value = $state(today(getLocalTimeZone()));
+	let jsonData = $state(null); // Store for the JSON response
+	let isLoading = $state(false);
+
+	const sheetsRequest = new Request(PUBLIC_N8N_TEST_URL, {
+		method: 'POST',
+		headers: {
+			Authorization: 'Basic ' + btoa(`${PUBLIC_N8N_USER}:${PUBLIC_N8N_PASS}`),
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			action: 'getSheetsData',
+			options: {
+				// grading || assignments
+				sheet: 'assignments',
+				pageName: 'Teacher',
+				range: 'A6:J50',
+				includeHeaders: true
+			}
+		})
+	});
+
+	async function getSheetsData() {
+		isLoading = true;
+		try {
+			const response = await fetch(sheetsRequest);
+			const data = await response.json();
+			jsonData = data; // Store the data
+			console.log('Sheets data:', jsonData);
+			return data;
+		} catch (error) {
+			console.error('Failed to get sheet data:', error);
+			return null;
+		} finally {
+			isLoading = false;
+		}
+	}
+
+	let students = [
+		'Joel',
+		'James',
+		'Ellie',
+		'Chris',
+		'Breanna',
+		'Josh',
+		'Kimberly',
+		'Layla'
+	];
+
+	let jobs = [
+		'Boys Bathroom',
+		'Girls Bathroom',
+		'Hall/Pad',
+		'Trash/Boards',
+		'Floor',
+		'Sports/Table',
+		'library',
+		'Neatness'
+	];
+
+	async function refreshData() {
+		console.log('Data refresh clicked');
+		await getSheetsData();
+	}
+
+	const sleepSeconds = 500;
+
+	onMount(() => {
+		const interval = setInterval(() => {
+			console.log(`sleeping for ${sleepSeconds} s`);
+			getSheetsData();
+		}, sleepSeconds * 1000);
+
+		// Cleanup on component destroy
+		return () => clearInterval(interval);
+	});
 </script>
 
-<div class="gradient-flow layout">
+<div class="grid grid-cols-[250px_1fr_1fr] gap-5 p-5">
+	<!-- First, let's add the JSON display at the top -->
+	<div class="col-span-3">
+		<Tile>
+			<div class="mb-2 flex items-center justify-between">
+				<h4 class="scroll-m-20 text-xl font-semibold tracking-tight">
+					JSON Response Preview
+				</h4>
+				<Button variant="outline" onclick={refreshData} disabled={isLoading}>
+					{#if isLoading}
+						Refreshing...
+					{:else}
+						Refresh Data
+					{/if}
+				</Button>
+			</div>
+			<pre class="max-h-60 overflow-x-auto rounded-md bg-gray-100 p-4 text-sm">
+				{#if jsonData}
+					{JSON.stringify(jsonData, null, 2)
+						.split('\n')
+						.slice(0, 20)
+						.join('\n')}
+				{:else if isLoading}
+					Loading data...
+				{:else}
+					No data available
+				{/if}
+			</pre>
+		</Tile>
+	</div>
+
+	<!-- <div class="flex flex-row justify-between"> -->
+	<div></div>
+	<!-- <Tile> -->
+	<!-- <h4>{value}</h4> -->
+	<!-- </Tile> -->
 	<Tile>
-		<h1>{new Date().toLocaleString()}</h1>
+		<h1
+			class="scroll-m-20 p-5 text-4xl font-extrabold tracking-tight lg:text-5xl"
+		>
+			Class 3 TRCS
+		</h1>
 	</Tile>
+	<!-- <Tile> -->
+	<div class="my-auto ml-auto p-5">
+		<Button on:click={triggerRefresh}>Refresh Display</Button>
+	</div>
+	<!-- </Tile> -->
+	<!-- </div> -->
+	<!-- <div> -->
+	<Tile><Calendar type="single" bind:value class="rounded-md border" /></Tile>
 	<Tile>
-		<button class="refresh-button" on:click={triggerRefresh}>Refresh Display</button>
+		<div class="w-full text-left">
+			<h4 class="scroll-m-20 text-center text-xl font-semibold tracking-tight">
+				Jobs
+			</h4>
+			<ul class="list-none p-0">
+				{#each students as student}
+					<li class="py-1">{student}</li>
+				{/each}
+			</ul>
+		</div>
 	</Tile>
+	<div></div>
+	<Tile>
+		<Table.Root>
+			<Table.Header>
+				<Table.Row>
+					<Table.Head class="">Job</Table.Head>
+					<Table.Head class="text-right">Student</Table.Head>
+				</Table.Row>
+			</Table.Header>
+			<Table.Body>
+				{#each jobs as job, i}
+					<Table.Row>
+						<Table.Cell class="font-medium">{jobs[i]}</Table.Cell>
+						<Table.Cell class="overflow-visible text-center">
+							{#if jobs[i] == 'Sports/Table'}
+								<div class="h-full w-full scale-125 rounded bg-red-500">
+									{students[i]}
+								</div>
+							{:else}
+								{students[i]}
+							{/if}
+						</Table.Cell>
+					</Table.Row>
+				{/each}
+			</Table.Body>
+		</Table.Root>
+	</Tile>
+	<!-- </div> -->
 </div>
-
-<style>
-	.layout {
-		display: grid;
-		grid-template-columns: 1fr 1fr 1fr;
-		grid-template-rows: 1fr 1fr 1fr;
-	}
-
-	@keyframes gradientFlow {
-		0% {
-			background-position: 0% 50%;
-		}
-		50% {
-			background-position: 100% 50%;
-		}
-		100% {
-			background-position: 0% 50%;
-		}
-	}
-
-	.gradient-flow {
-		margin: 0;
-		padding: 0;
-		height: 100vh;
-
-		background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
-		background-size: 400% 400%;
-		animation: gradientFlow 15s ease infinite;
-		font-family:
-			-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans',
-			'Helvetica Neue', sans-serif;
-	}
-	.message {
-		font-size: 4rem;
-		color: #333;
-		text-align: center;
-		padding: 2rem;
-		background-color: white;
-		border-radius: 1rem;
-		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-		margin-bottom: 2rem;
-	}
-
-	.refresh-button {
-		padding: 1rem 2rem;
-		font-size: 1.2rem;
-		background-color: #4caf50;
-		color: white;
-		border: none;
-		border-radius: 0.5rem;
-		cursor: pointer;
-		transition: background-color 0.3s;
-	}
-
-	.refresh-button:hover {
-		background-color: #45a049;
-	}
-
-	.refresh-button:disabled {
-		background-color: #cccccc;
-		cursor: not-allowed;
-	}
-
-	.status {
-		margin-top: 1rem;
-		font-size: 1rem;
-		color: #666;
-	}
-</style>
