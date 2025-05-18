@@ -12,28 +12,32 @@
 	import { getLocalTimeZone, today } from '@internationalized/date';
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { onMount } from 'svelte';
+	import { dev } from '$app/environment';
 
 	let value = $state(today(getLocalTimeZone()));
 	let jsonData = $state(null); // Store for the JSON response
 	let isLoading = $state(false);
 
-	const sheetsRequest = new Request(PUBLIC_N8N_TEST_URL, {
-		method: 'POST',
-		headers: {
-			Authorization: 'Basic ' + btoa(`${PUBLIC_N8N_USER}:${PUBLIC_N8N_PASS}`),
-			'Content-Type': 'application/json'
-		},
-		body: JSON.stringify({
-			action: 'getSheetsData',
-			options: {
-				// grading || assignments
-				sheet: 'assignments',
-				pageName: 'Teacher',
-				range: 'A6:J50',
-				includeHeaders: true
-			}
-		})
-	});
+	const sheetsRequest = new Request(
+		dev ? PUBLIC_N8N_TEST_URL : PUBLIC_N8N_PROD_URL,
+		{
+			method: 'POST',
+			headers: {
+				Authorization: 'Basic ' + btoa(`${PUBLIC_N8N_USER}:${PUBLIC_N8N_PASS}`),
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				action: 'getSheetsData',
+				options: {
+					// grading || assignments
+					sheet: 'assignments',
+					pageName: 'Teacher',
+					range: 'A6:J50',
+					includeHeaders: true
+				}
+			})
+		}
+	);
 
 	async function getSheetsData() {
 		isLoading = true;
