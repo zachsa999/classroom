@@ -1,0 +1,8 @@
+{
+    "server_url": "https://your-netlify-site.netlify.app",
+    "device_id": "raspberry_pi_1",
+    "static_password": "your_secure_password_here",
+    "refresh_token": "your_refresh_token_here",
+    "refresh_interval_hours": 24,
+    "auto_start": true
+}
